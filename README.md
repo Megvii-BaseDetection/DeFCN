@@ -39,7 +39,7 @@ ln -s /path/to/your/coco/dataset coco
 * Train & Test
 ```shell
 git clone https://github.com/Megvii-BaseDetection/DeFCN.git
-cd DeFCN/playground/detection/coco/experiment  # for example
+cd DeFCN/playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms  # for example
 
 # Train
 pods_train --num-gpus 8
@@ -57,11 +57,36 @@ pods_train --num-gpus 8 --num-machines N --machine-rank 0/1/.../N-1 --dist-url "
 
 ## Results on COCO2017 val set
 
-Comming soon
+| Model | Assignment | with NMS | training schedule | mAP | mAR |
+|:------|:----------:|:--------:|:-----------------:|:---:|:---:|
+| [FCOS](./playground/detection/coco/fcos.res50.fpn.coco.800size.3x_ms) | one-to-many | Yes | 3x + ms | coming soon |  |
+| [FCOS baseline](./playground/detection/coco/fcos.res50.fpn.coco.800size.3x_ms.wo_ctrness) | one-to-many | Yes | 3x + ms | coming soon |  |
+| [Anchor](./playground/detection/coco/anchor.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | coming soon |  |
+| [Center](./playground/detection/coco/center.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | coming soon |  |
+| [Foreground Loss](./playground/detection/coco/loss.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | 38.5 | 62.2 |
+| [POTO](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | 39.0 | 61.6 |
+| [POTO + 3DMF](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms.3dmf) | one-to-one | No | 3x + ms | 40.3 | 61.4 |
+| [POTO + 3DMF + Aux](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms.3dmf.aux) | mixture\* | No | 3x + ms | 41.5 | 61.4 |
+| [POTO](./playground/detection/coco/poto.res50.fpn.coco.800size.6x_ms) | one-to-one | No | 6x + ms | 40.4 | 62.3 |
+
+\* We adopt a one-to-one assignment in POTO and a one-to-many assignment in the auxiliary loss, respectively.
+
+- `2x + ms` schedule is adopted in the paper, but we adopt `3x + ms` schedule here to achieve higher performance.
+- It's normal to observe ~0.3AP noise in POTO.
 
 ## Results on CrowdHuman val set
 
-Comming soon
+| Model | Assignment | with NMS | training schedule | AP50 | mMR | Recall |
+|:------|:----------:|:--------:|:-----------------:|:----:|:---:|:------:|
+| [FCOS](./playground/detection/crowdhuman/fcos.res50.fpn.crowdhuman.800size.30k) | one-to-many | Yes | 30k iters | 86.0 | 55.2 | 94.1 |
+| [ATSS](./playground/detection/crowdhuman/atss.res50.fpn.crowdhuman.800size.30k) | one-to-many | Yes | 30k iters | 87.1 | 50.3 | 94.0 |
+| [POTO](./playground/detection/crowdhuman/poto.res50.fpn.crowdhuman.800size.30k) | one-to-one | No | 30k iters | 88.7 | 52.0 | 96.5 |
+| [POTO + 3DMF](./playground/detection/crowdhuman/poto.res50.fpn.crowdhuman.800size.30k.3dmf) | one-to-one | No | 30k iters | 89.0 | 51.3 | 96.9 |
+| [POTO + 3DMF + Aux](./playground/detection/crowdhuman/poto.res50.fpn.crowdhuman.800size.30k.3dmf.aux) | mixture\* | No | 30k iters | 89.3 | 48.9 | 96.6 |
+
+\* We adopt a one-to-one assignment in POTO and a one-to-many assignment in the auxiliary loss, respectively.
+
+- It's normal to observe ~0.3AP noise in POTO, and ~1.0mMR noise in all methods.
 
 ## Acknowledgement
 This repo is developed based on cvpods. Please check [cvpods](https://github.com/Megvii-BaseDetection/cvpods) for more details and features.
@@ -74,7 +99,7 @@ If you use this work in your research or wish to refer to the baseline results p
 ```
 @article{wang2020end,
   title   =  {End-to-End Object Detection with Fully Convolutional Network},
-  author  =  {Jianfeng Wang and Lin Song and Zeming Li and Hongbin Sun and Jian Sun and Nanning Zheng},
+  author  =  {Wang, Jianfeng and Song, Lin and Li, Zeming and Sun, Hongbin and Sun, Jian and Zheng, Nanning},
   journal =  {arXiv preprint arXiv:2012.03544},
   year    =  {2020}
 }
