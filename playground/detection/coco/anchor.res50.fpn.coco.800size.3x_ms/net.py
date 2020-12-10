@@ -1,7 +1,7 @@
 import logging
 
 from cvpods.layers import ShapeSpec
-from cvpods.modeling.anchor_generator import ShiftGenerator
+from cvpods.modeling.anchor_generator import DefaultAnchorGenerator
 from cvpods.modeling.backbone import Backbone
 from cvpods.modeling.backbone.fpn import build_retinanet_resnet_fpn_backbone
 
@@ -23,15 +23,15 @@ def build_backbone(cfg, input_shape=None):
     return backbone
 
 
-def build_shift_generator(cfg, input_shape):
+def build_anchor_generator(cfg, input_shape):
 
-    return ShiftGenerator(cfg, input_shape)
+    return DefaultAnchorGenerator(cfg, input_shape)
 
 
 def build_model(cfg):
 
     cfg.build_backbone = build_backbone
-    cfg.build_shift_generator = build_shift_generator
+    cfg.build_anchor_generator = build_anchor_generator
 
     model = FCOS(cfg)
     logger = logging.getLogger(__name__)

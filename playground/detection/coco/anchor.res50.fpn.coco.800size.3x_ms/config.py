@@ -6,12 +6,12 @@ _config_dict = dict(
     MODEL=dict(
         WEIGHTS="detectron2://ImageNetPretrained/MSRA/R-50.pkl",
         RESNETS=dict(DEPTH=50),
-        SHIFT_GENERATOR=dict(
-            NUM_SHIFTS=1,
+        ANCHOR_GENERATOR=dict(
+            SIZES=[[32], [64], [128], [256], [512]],
+            ASPECT_RATIOS=[[1.0]],
             OFFSET=0.5,
         ),
         FCOS=dict(
-            NORM_REG_TARGETS=True,
             NMS_THRESH_TEST=1.0,  # disable NMS when NMS threshold is 1.0
             BBOX_REG_WEIGHTS=(1.0, 1.0, 1.0, 1.0),
             FOCAL_LOSS_GAMMA=2.0,
@@ -20,8 +20,7 @@ _config_dict = dict(
             REG_WEIGHT=2.0,
         ),
         POTO=dict(
-            ALPHA=0.8,
-            CENTER_SAMPLING_RADIUS=1.5,
+            IOU_TOPK=1,
         ),
         NMS_TYPE=None,
     ),
@@ -32,8 +31,8 @@ _config_dict = dict(
     SOLVER=dict(
         CHECKPOINT_PERIOD=10000,
         LR_SCHEDULER=dict(
-            MAX_ITER=720000,
-            STEPS=(660000, 700000),
+            MAX_ITER=270000,
+            STEPS=(210000, 250000),
         ),
         OPTIMIZER=dict(
             BASE_LR=0.01,

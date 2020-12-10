@@ -4,13 +4,11 @@ from typing import List
 
 import torch
 import torch.nn.functional as F
-from scipy.optimize import linear_sum_assignment
 from torch import nn
 
 from cvpods.layers import ShapeSpec, cat, generalized_batched_nms
-from cvpods.modeling.box_regression import Shift2BoxTransform
+from cvpods.modeling.box_regression import Box2BoxTransform
 from cvpods.modeling.losses import iou_loss, sigmoid_focal_loss_jit
-from cvpods.modeling.meta_arch.fcos import Scale
 from cvpods.modeling.meta_arch.retinanet import (
     permute_to_N_HWA_K,
     permute_all_cls_and_box_to_N_HWA_K_and_concat
@@ -32,7 +30,6 @@ class FCOS(nn.Module):
         # fmt: off
         self.num_classes = cfg.MODEL.FCOS.NUM_CLASSES
         self.in_features = cfg.MODEL.FCOS.IN_FEATURES
-        self.fpn_strides = cfg.MODEL.FCOS.FPN_STRIDES
         # Loss parameters:
         self.focal_loss_alpha = cfg.MODEL.FCOS.FOCAL_LOSS_ALPHA
         self.focal_loss_gamma = cfg.MODEL.FCOS.FOCAL_LOSS_GAMMA
@@ -52,13 +49,12 @@ class FCOS(nn.Module):
         backbone_shape = self.backbone.output_shape()
         feature_shapes = [backbone_shape[f] for f in self.in_features]
         self.head = FCOSHead(cfg, feature_shapes)
-        self.shift_generator = cfg.build_shift_generator(cfg, feature_shapes)
+        self.anchor_generator = cfg.build_anchor_generator(cfg, feature_shapes)
 
         # Matching and loss
-        self.shift2box_transform = Shift2BoxTransform(
+        self.box2box_transform = Box2BoxTransform(
             weights=cfg.MODEL.FCOS.BBOX_REG_WEIGHTS)
-        self.poto_alpha = cfg.MODEL.POTO.ALPHA
-        self.center_sampling_radius = cfg.MODEL.POTO.CENTER_SAMPLING_RADIUS
+        self.iou_topk = cfg.MODEL.POTO.IOU_TOPK
 
         pixel_mean = torch.Tensor(cfg.MODEL.PIXEL_MEAN).to(self.device).view(
             3, 1, 1)
@@ -104,14 +100,15 @@ class FCOS(nn.Module):
         features = self.backbone(images.tensor)
         features = [features[f] for f in self.in_features]
         box_cls, box_delta = self.head(features)
-        shifts = self.shift_generator(features)
+        anchors = self.anchor_generator(features)
 
         if self.training:
-            gt_classes, gt_shifts_reg_deltas = self.get_ground_truth(
-                shifts, gt_instances, box_cls, box_delta)
-            return self.losses(gt_classes, gt_shifts_reg_deltas, box_cls, box_delta)
+            gt_classes, gt_anchors_reg_deltas = self.get_ground_truth(
+                anchors, gt_instances)
+            return self.losses(gt_classes, gt_anchors_reg_deltas, box_cls,
+                               box_delta, anchors)
         else:
-            results = self.inference(box_cls, box_delta, shifts, images)
+            results = self.inference(box_cls, box_delta, anchors, images)
             processed_results = []
             for results_per_image, input_per_image, image_size in zip(
                     results, batched_inputs, images.image_sizes):
@@ -121,15 +118,15 @@ class FCOS(nn.Module):
                 processed_results.append({"instances": r})
             return processed_results
 
-    def losses(self, gt_classes, gt_shifts_deltas, pred_class_logits,
-               pred_shift_deltas):
+    def losses(self, gt_classes, gt_anchors_deltas, pred_class_logits,
+               pred_anchor_deltas, anchors):
         """
         Args:
-            For `gt_classes` and `gt_shifts_deltas` parameters, see
+            For `gt_classes` and `gt_anchors_deltas` parameters, see
                 :meth:`FCOS.get_ground_truth`.
             Their shapes are (N, R) and (N, R, 4), respectively, where R is
-            the total number of shifts across levels, i.e. sum(Hi x Wi)
-            For `pred_class_logits` and `pred_shift_deltas`, see
+            the total number of anchors across levels, i.e. sum(Hi x Wi)
+            For `pred_class_logits` and `pred_anchor_deltas`, see
                 :meth:`FCOSHead.forward`.
 
         Returns:
@@ -138,13 +135,13 @@ class FCOS(nn.Module):
                 storing the loss. Used during training only. The dict keys are:
                 "loss_cls" and "loss_box_reg"
         """
-        pred_class_logits, pred_shift_deltas = \
+        pred_class_logits, pred_anchor_deltas = \
             permute_all_cls_and_box_to_N_HWA_K_and_concat(
-                pred_class_logits, pred_shift_deltas, self.num_classes
+                pred_class_logits, pred_anchor_deltas, self.num_classes
             )  # Shapes: (N x R, K) and (N x R, 4), respectively.
 
         gt_classes = gt_classes.flatten()
-        gt_shifts_deltas = gt_shifts_deltas.view(-1, 4)
+        gt_anchors_deltas = gt_anchors_deltas.view(-1, 4)
 
         valid_idxs = gt_classes >= 0
         foreground_idxs = (gt_classes >= 0) & (gt_classes != self.num_classes)
@@ -164,11 +161,19 @@ class FCOS(nn.Module):
             reduction="sum",
         ) / max(1.0, num_foreground)
 
+        anchors = Boxes.cat([Boxes.cat(anchors_i) for anchors_i in anchors])
+        pred_anchor_deltas = self.box2box_transform.apply_deltas(
+            pred_anchor_deltas, anchors.tensor
+        )
+        gt_anchors_deltas = self.box2box_transform.apply_deltas(
+            gt_anchors_deltas, anchors.tensor
+        )
+
         # regression loss
         loss_box_reg = iou_loss(
-            pred_shift_deltas[foreground_idxs],
-            gt_shifts_deltas[foreground_idxs],
-            box_mode="ltrb",
+            pred_anchor_deltas[foreground_idxs],
+            gt_anchors_deltas[foreground_idxs],
+            box_mode="xyxy",
             loss_type=self.iou_loss_type,
             reduction="sum",
         ) / max(1.0, num_foreground) * self.reg_weight
@@ -179,11 +184,11 @@ class FCOS(nn.Module):
         }
 
     @torch.no_grad()
-    def get_ground_truth(self, shifts, targets, box_cls, box_delta):
+    def get_ground_truth(self, anchors, targets):
         """
         Args:
-            shifts (list[list[Tensor]]): a list of N=#image elements. Each is a
-                list of #feature level tensors. The tensors contains shifts of
+            anchors (list[list[Boxes]]): a list of N=#image elements. Each is a
+                list of #feature level Boxes. The Boxes contains anchors of
                 this image on the specific feature level.
             targets (list[Instances]): a list of N `Instances`s. The i-th
                 `Instances` contains the ground-truth per-instance annotations
@@ -192,109 +197,88 @@ class FCOS(nn.Module):
         Returns:
             gt_classes (Tensor):
                 An integer tensor of shape (N, R) storing ground-truth
-                labels for each shift.
-                R is the total number of shifts, i.e. the sum of Hi x Wi for all levels.
-                Shifts in the valid boxes are assigned their corresponding label in the
-                [0, K-1] range. Shifts in the background are assigned the label "K".
-                Shifts in the ignore areas are assigned a label "-1", i.e. ignore.
-            gt_shifts_deltas (Tensor):
+                labels for each anchor.
+                R is the total number of anchors, i.e. the sum of Hi x Wi for all levels.
+                Anchors with an IoU with some target higher than the foreground threshold
+                are assigned their corresponding label in the [0, K-1] range.
+                Anchors whose IoU are below the background threshold are assigned
+                the label "K". Anchors whose IoU are between the foreground and background
+                thresholds are assigned a label "-1", i.e. ignore.
+            gt_anchors_deltas (Tensor):
                 Shape (N, R, 4).
-                The last dimension represents ground-truth shift2box transform
-                targets (dl, dt, dr, db) that map each shift to its matched ground-truth box.
+                The last dimension represents ground-truth box2box transform
+                targets (dx, dy, dw, dh) that map each anchor to its matched ground-truth box.
                 The values in the tensor are meaningful only when the corresponding
-                shift is labeled as foreground.
+                anchor is labeled as foreground.
         """
         gt_classes = []
-        gt_shifts_deltas = []
-
-        box_cls = torch.cat([permute_to_N_HWA_K(x, self.num_classes) for x in box_cls], dim=1)
-        box_delta = torch.cat([permute_to_N_HWA_K(x, 4) for x in box_delta], dim=1)
-        box_cls = box_cls.sigmoid_()
+        gt_anchors_deltas = []
 
         num_fg = 0
         num_gt = 0
 
-        for shifts_per_image, targets_per_image, box_cls_per_image, box_delta_per_image in zip(
-                shifts, targets, box_cls, box_delta):
-            shifts_over_all_feature_maps = torch.cat(shifts_per_image, dim=0)
+        for anchors_per_image, targets_per_image in zip(anchors, targets):
+            anchors_per_image = Boxes.cat(anchors_per_image)
 
             gt_boxes = targets_per_image.gt_boxes
 
-            prob = box_cls_per_image[:, targets_per_image.gt_classes].t()
-            boxes = self.shift2box_transform.apply_deltas(
-                box_delta_per_image, shifts_over_all_feature_maps
-            )
-            iou = pairwise_iou(gt_boxes, Boxes(boxes))
-            quality = prob ** (1 - self.poto_alpha) * iou ** self.poto_alpha
+            match_quality_matrix = pairwise_iou(gt_boxes, anchors_per_image)
 
-            deltas = self.shift2box_transform.get_deltas(
-                shifts_over_all_feature_maps, gt_boxes.tensor.unsqueeze(1))
+            _, is_positive = match_quality_matrix.topk(self.iou_topk, dim=1)
+            is_foreground = torch.zeros_like(
+                match_quality_matrix, dtype=torch.bool
+            ).scatter_(1, is_positive, True)
 
-            if self.center_sampling_radius > 0:
-                centers = gt_boxes.get_centers()
-                is_in_boxes = []
-                for stride, shifts_i in zip(self.fpn_strides, shifts_per_image):
-                    radius = stride * self.center_sampling_radius
-                    center_boxes = torch.cat((
-                        torch.max(centers - radius, gt_boxes.tensor[:, :2]),
-                        torch.min(centers + radius, gt_boxes.tensor[:, 2:]),
-                    ), dim=-1)
-                    center_deltas = self.shift2box_transform.get_deltas(
-                        shifts_i, center_boxes.unsqueeze(1))
-                    is_in_boxes.append(center_deltas.min(dim=-1).values > 0)
-                is_in_boxes = torch.cat(is_in_boxes, dim=1)
-            else:
-                # no center sampling, it will use all the locations within a ground-truth box
-                is_in_boxes = deltas.min(dim=-1).values > 0
+            match_quality_matrix[~is_foreground] = -1
 
-            quality[~is_in_boxes] = -1
+            # if there are still more than one objects for a position,
+            # we choose the one with maximum quality
+            anchor_labels, gt_matched_idxs = match_quality_matrix.max(dim=0)
 
-            gt_idxs, shift_idxs = linear_sum_assignment(quality.cpu().numpy(), maximize=True)
-
-            num_fg += len(shift_idxs)
+            num_fg += (anchor_labels != -1).sum().item()
             num_gt += len(targets_per_image)
 
-            gt_classes_i = shifts_over_all_feature_maps.new_full(
-                (len(shifts_over_all_feature_maps),), self.num_classes, dtype=torch.long
-            )
-            gt_shifts_reg_deltas_i = shifts_over_all_feature_maps.new_zeros(
-                len(shifts_over_all_feature_maps), 4
-            )
-            if len(targets_per_image) > 0:
-                # ground truth classes
-                gt_classes_i[shift_idxs] = targets_per_image.gt_classes[gt_idxs]
-                # ground truth box regression
-                gt_shifts_reg_deltas_i[shift_idxs] = self.shift2box_transform.get_deltas(
-                    shifts_over_all_feature_maps[shift_idxs], gt_boxes[gt_idxs].tensor
-                )
+            # ground truth box regression
+            gt_anchors_reg_deltas_i = self.box2box_transform.get_deltas(
+                anchors_per_image.tensor, gt_boxes[gt_matched_idxs].tensor)
+
+            # ground truth classes
+            has_gt = len(targets_per_image) > 0
+            if has_gt:
+                gt_classes_i = targets_per_image.gt_classes[gt_matched_idxs]
+                # Anchors with label -1 are treated as background.
+                gt_classes_i[anchor_labels == -1] = self.num_classes
+            else:
+                gt_classes_i = torch.zeros_like(
+                    gt_matched_idxs) + self.num_classes
 
             gt_classes.append(gt_classes_i)
-            gt_shifts_deltas.append(gt_shifts_reg_deltas_i)
+            gt_anchors_deltas.append(gt_anchors_reg_deltas_i)
 
         get_event_storage().put_scalar("num_fg_per_gt", num_fg / num_gt)
 
-        return torch.stack(gt_classes), torch.stack(gt_shifts_deltas)
+        return torch.stack(gt_classes), torch.stack(gt_anchors_deltas)
 
-    def inference(self, box_cls, box_delta, shifts, images):
+    def inference(self, box_cls, box_delta, anchors, images):
         """
         Arguments:
             box_cls, box_delta: Same as the output of :meth:`FCOSHead.forward`
-            shifts (list[list[Tensor]): a list of #images elements. Each is a
-                list of #feature level tensor. The tensor contain shifts of this
+            anchors (list[list[Boxes]]): a list of #images elements. Each is a
+                list of #feature level Boxes. The Boxes contain anchors of this
                 image on the specific feature level.
             images (ImageList): the input images
 
         Returns:
             results (List[Instances]): a list of #images elements.
         """
-        assert len(shifts) == len(images)
+        assert len(anchors) == len(images)
         results = []
 
         box_cls = [permute_to_N_HWA_K(x, self.num_classes) for x in box_cls]
         box_delta = [permute_to_N_HWA_K(x, 4) for x in box_delta]
         # list[Tensor], one per level, each has shape (N, Hi x Wi x A, K or 4)
 
-        for img_idx, shifts_per_image in enumerate(shifts):
+        for img_idx, anchors_per_image in enumerate(anchors):
             image_size = images.image_sizes[img_idx]
             box_cls_per_image = [
                 box_cls_per_level[img_idx] for box_cls_per_level in box_cls
@@ -303,12 +287,12 @@ class FCOS(nn.Module):
                 box_reg_per_level[img_idx] for box_reg_per_level in box_delta
             ]
             results_per_image = self.inference_single_image(
-                box_cls_per_image, box_reg_per_image, shifts_per_image,
+                box_cls_per_image, box_reg_per_image, anchors_per_image,
                 tuple(image_size))
             results.append(results_per_image)
         return results
 
-    def inference_single_image(self, box_cls, box_delta, shifts, image_size):
+    def inference_single_image(self, box_cls, box_delta, anchors, image_size):
         """
         Single-image inference. Return bounding-box detection results by thresholding
         on scores and applying non-maximum suppression (NMS).
@@ -317,8 +301,8 @@ class FCOS(nn.Module):
             box_cls (list[Tensor]): list of #feature levels. Each entry contains
                 tensor of size (H x W, K)
             box_delta (list[Tensor]): Same shape as 'box_cls' except that K becomes 4.
-            shifts (list[Tensor]): list of #feature levels. Each entry contains
-                a tensor, which contains all the shifts for that
+            anchors (list[Boxes]): list of #feature levels. Each entry contains
+                a Boxes object, which contains all the anchors for that
                 image in that feature level.
             image_size (tuple(H, W)): a tuple of the image height and width.
 
@@ -330,7 +314,7 @@ class FCOS(nn.Module):
         class_idxs_all = []
 
         # Iterate over every feature level
-        for box_cls_i, box_reg_i, shifts_i in zip(box_cls, box_delta, shifts):
+        for box_cls_i, box_reg_i, anchors_i in zip(box_cls, box_delta, anchors):
             # (HxWxK,)
             box_cls_i = box_cls_i.sigmoid_().flatten()
 
@@ -346,14 +330,14 @@ class FCOS(nn.Module):
             predicted_prob = predicted_prob[keep_idxs]
             topk_idxs = topk_idxs[keep_idxs]
 
-            shift_idxs = topk_idxs // self.num_classes
+            anchor_idxs = topk_idxs // self.num_classes
             classes_idxs = topk_idxs % self.num_classes
 
-            box_reg_i = box_reg_i[shift_idxs]
-            shifts_i = shifts_i[shift_idxs]
+            box_reg_i = box_reg_i[anchor_idxs]
+            anchors_i = anchors_i[anchor_idxs]
             # predict boxes
-            predicted_boxes = self.shift2box_transform.apply_deltas(
-                box_reg_i, shifts_i)
+            predicted_boxes = self.box2box_transform.apply_deltas(
+                box_reg_i, anchors_i.tensor)
 
             boxes_all.append(predicted_boxes)
             scores_all.append(predicted_prob)
@@ -402,9 +386,9 @@ class FCOS(nn.Module):
         features = self.backbone(images.tensor)
         features = [features[f] for f in self.in_features]
         box_cls, box_delta = self.head(features)
-        shifts = self.shift_generator(features)
+        anchors = self.anchor_generator(features)
 
-        results = self.inference(box_cls, box_delta, shifts, images)
+        results = self.inference(box_cls, box_delta, anchors, images)
         for results_per_image, input_per_image, image_size in zip(
                 results, batched_inputs, images.image_sizes
         ):
@@ -426,12 +410,12 @@ class FCOSHead(nn.Module):
         num_classes = cfg.MODEL.FCOS.NUM_CLASSES
         num_convs = cfg.MODEL.FCOS.NUM_CONVS
         prior_prob = cfg.MODEL.FCOS.PRIOR_PROB
-        num_shifts = cfg.build_shift_generator(cfg, input_shape).num_cell_shifts
+        num_anchors = cfg.build_anchor_generator(cfg, input_shape).num_cell_anchors
         self.fpn_strides = cfg.MODEL.FCOS.FPN_STRIDES
         self.norm_reg_targets = cfg.MODEL.FCOS.NORM_REG_TARGETS
         # fmt: on
-        assert len(set(num_shifts)) == 1, "using differenct num_shifts value is not supported"
-        num_shifts = num_shifts[0]
+        assert len(set(num_anchors)) == 1, "using differenct num_anchors value is not supported"
+        num_anchors = num_anchors[0]
 
         cls_subnet = []
         bbox_subnet = []
@@ -456,12 +440,12 @@ class FCOSHead(nn.Module):
         self.cls_subnet = nn.Sequential(*cls_subnet)
         self.bbox_subnet = nn.Sequential(*bbox_subnet)
         self.cls_score = nn.Conv2d(in_channels,
-                                   num_shifts * num_classes,
+                                   num_anchors * num_classes,
                                    kernel_size=3,
                                    stride=1,
                                    padding=1)
         self.bbox_pred = nn.Conv2d(in_channels,
-                                   num_shifts * 4,
+                                   num_anchors * 4,
                                    kernel_size=3,
                                    stride=1,
                                    padding=1)
@@ -482,9 +466,6 @@ class FCOSHead(nn.Module):
         bias_value = -math.log((1 - prior_prob) / prior_prob)
         torch.nn.init.constant_(self.cls_score.bias, bias_value)
 
-        self.scales = nn.ModuleList(
-            [Scale(init_value=1.0) for _ in range(len(self.fpn_strides))])
-
     def forward(self, features):
         """
         Arguments:
@@ -497,20 +478,15 @@ class FCOSHead(nn.Module):
                 at each spatial position for each of the K object classes.
             bbox_reg (list[Tensor]): #lvl tensors, each has shape (N, 4, Hi, Wi).
                 The tensor predicts 4-vector (dl,dt,dr,db) box
-                regression values for every shift. These values are the
-                relative offset between the shift and the ground truth box.
+                regression values for every anchor. These values are the
+                relative offset between the anchor and the ground truth box.
         """
         logits = []
         bbox_reg = []
-        for level, feature in enumerate(features):
+        for feature in features:
             cls_subnet = self.cls_subnet(feature)
             bbox_subnet = self.bbox_subnet(feature)
 
             logits.append(self.cls_score(cls_subnet))
-
-            bbox_pred = self.scales[level](self.bbox_pred(bbox_subnet))
-            if self.norm_reg_targets:
-                bbox_reg.append(F.relu(bbox_pred) * self.fpn_strides[level])
-            else:
-                bbox_reg.append(torch.exp(bbox_pred))
+            bbox_reg.append(self.bbox_pred(bbox_subnet))
         return logits, bbox_reg

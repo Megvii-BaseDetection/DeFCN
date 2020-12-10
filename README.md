@@ -61,13 +61,12 @@ pods_train --num-gpus 8 --num-machines N --machine-rank 0/1/.../N-1 --dist-url "
 |:------|:----------:|:--------:|:---------:|:---:|:---:|:--------:|
 | [FCOS](./playground/detection/coco/fcos.res50.fpn.coco.800size.3x_ms) | one-to-many | Yes | 3x + ms | coming soon | | |
 | [FCOS baseline](./playground/detection/coco/fcos.res50.fpn.coco.800size.3x_ms.wo_ctrness) | one-to-many | Yes | 3x + ms | coming soon | | |
-| [Anchor](./playground/detection/coco/anchor.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | coming soon | | |
+| [Anchor](./playground/detection/coco/anchor.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | 37.1 | 60.1 | |
 | [Center](./playground/detection/coco/center.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | coming soon | | |
 | [Foreground Loss](./playground/detection/coco/loss.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | 38.5 | 62.2 | [weights](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EUNLYB_qIRZKlLZ8UAGgO3YBmKtuVrsNA3CVLVFk_NKvKw?e=mbT2kY) \| [logs](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EV43J3LWqVFNqWKKVBb6GOEBjJO7uHj7i1HVWNnAZBu1_g?e=YKfJs9) |
 | [POTO](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | 39.0 | 61.6 | [weights](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/ETyzm_Tdl91EiD2JuXP_WTkByMN_peE6hhPTezlpWT4-FQ?e=a3MstA) \| [logs](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/Ebinr1lWsuRAnISaR4giC6gBVZ7hEoM5A992QbHsiTJcVg?e=tIR03C) |
 | [POTO + 3DMF](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms.3dmf) | one-to-one | No | 3x + ms | 40.3 | 61.4 | [weights](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EdyQqSlekf9Avpc4DrHokvABQOVt9T29ISvkUSKlIPkbcA?e=df6D2Y) \| [logs](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EbLZyKkQazNAl-_wjqRSyiMB3g2kygx9HshgL3-el_7wEg?e=6JXyxf) |
 | [POTO + 3DMF + Aux](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms.3dmf.aux) | mixture\* | No | 3x + ms | 41.5 | 61.4 | [weights](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EYgGs9PXLDVBsRxD7fluh7YBnAndyoOi7KzEdqMkB0vFZg?e=olYUaQ) \| [logs](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EaeB2tlXYmVBoKKtVEtGUOMBuLZNOUQtQ3iTksPdPCFAJw?e=ZwmlDB) |
-| [POTO](./playground/detection/coco/poto.res50.fpn.coco.800size.6x_ms) | one-to-one | No | 6x + ms | 40.4 | 62.3 | [weights](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EVL8D2bJ5rRKpMd-urehTMkBjWTk3S3RZAX03Z4dX_hcUg?e=1oRLOg) \| [logs](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EWxKy31_0tdEs4pzKWV8rvIBtli_SW-QvVWf2Cpzz5VwqQ?e=SJCpi1) |
 
 \* We adopt a one-to-one assignment in POTO and a one-to-many assignment in the auxiliary loss, respectively.
 
