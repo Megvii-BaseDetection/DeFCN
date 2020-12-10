@@ -4,7 +4,7 @@
 
 This project provides an implementation for "[End-to-End Object Detection with Fully Convolutional Network](https://arxiv.org/abs/2012.03544)" on PyTorch.
 
-For the reason that experiments in the paper were conducted using internal framework, this project reimplements them on cvpods and reports detailed comparisons below.
+Experiments in the paper were conducted on the internal framework, thus we reimplement them on [cvpods](https://github.com/Megvii-BaseDetection/cvpods) and report details as below.
 
 ![](./pipeline.png)
 
@@ -60,8 +60,8 @@ pods_train --num-gpus 8 --num-machines N --machine-rank 0/1/.../N-1 --dist-url "
 | model | assignment | with NMS | lr sched. | mAP | mAR | download |
 |:------|:----------:|:--------:|:---------:|:---:|:---:|:--------:|
 | [FCOS](./playground/detection/coco/fcos.res50.fpn.coco.800size.3x_ms) | one-to-many | Yes | 3x + ms | coming soon | | |
-| [FCOS baseline](./playground/detection/coco/fcos.res50.fpn.coco.800size.3x_ms.wo_ctrness) | one-to-many | Yes | 3x + ms | coming soon | | |
-| [Anchor](./playground/detection/coco/anchor.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | 37.1 | 60.1 | |
+| [FCOS baseline](./playground/detection/coco/fcos.res50.fpn.coco.800size.3x_ms.wo_ctrness) | one-to-many | Yes | 3x + ms | 40.7 | 58.1 | [weights](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EWiLRCqKVWZHvn3kjhx7aCsB8CIrecsK7K5VuVgTQVaonA?e=TW79W2) \| [logs](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EQPmXtL8XVxMmWbO7ikqF28BdXDckIsmBTF77cWIGxuCoA?e=vtScEJ) |
+| [Anchor](./playground/detection/coco/anchor.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | 37.1 | 60.1 | [weights](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EfQV5I0pE2lEuMAQYIcN3MUBtOKWJhOSV3Fkv9Qx7hYfqA?e=M7jM2a) \| [logs](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EVJi5DgrRHtPq4BUB3EA0NQBvdHFGgk_lgrcE2I8l6Gf1w?e=ADHOhn) |
 | [Center](./playground/detection/coco/center.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | coming soon | | |
 | [Foreground Loss](./playground/detection/coco/loss.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | 38.5 | 62.2 | [weights](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EUNLYB_qIRZKlLZ8UAGgO3YBmKtuVrsNA3CVLVFk_NKvKw?e=mbT2kY) \| [logs](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/EV43J3LWqVFNqWKKVBb6GOEBjJO7uHj7i1HVWNnAZBu1_g?e=YKfJs9) |
 | [POTO](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms) | one-to-one | No | 3x + ms | 39.0 | 61.6 | [weights](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/ETyzm_Tdl91EiD2JuXP_WTkByMN_peE6hhPTezlpWT4-FQ?e=a3MstA) \| [logs](https://megvii-my.sharepoint.cn/:u:/g/personal/wangjianfeng_megvii_com/Ebinr1lWsuRAnISaR4giC6gBVZ7hEoM5A992QbHsiTJcVg?e=tIR03C) |
