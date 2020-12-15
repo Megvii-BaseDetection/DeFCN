@@ -87,6 +87,21 @@ pods_train --num-gpus 8 --num-machines N --machine-rank 0/1/.../N-1 --dist-url "
 
 - It's normal to observe ~0.3AP noise in POTO, and ~1.0mMR noise in all methods.
 
+## Ablations on COCO2017 val set
+
+| model | assignment | with NMS | lr sched. | mAP | mAR | note |
+|:------|:----------:|:--------:|:---------:|:---:|:---:|:----:|
+| [POTO](./playground/detection/coco/poto.res50.fpn.coco.800size.6x_ms) | one-to-one | No | 6x + ms | 39.8 | 62.1 | |
+| [POTO](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms.argmax) | one-to-one | No | 3x + ms | 39.0 | 61.3 | replace Hungarian algorithm by `argmax` |
+| [POTO + 3DMF](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms.3dmf_wo_gn) | one-to-one | No | 3x + ms | 40.7 | 61.9 | remove GN in 3DMF |
+| [POTO + 3DMF + Aux](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms.3dmf_wo_gn.aux) | mixture\* | No | 3x + ms | 41.6 | 61.5 | remove GN in 3DMF |
+
+\* We adopt a one-to-one assignment in POTO and a one-to-many assignment in the auxiliary loss, respectively.
+
+- For `one-to-one` assignment, more training iters lead to higher performance.
+- The `argmax` (also known as top-1) operation is indeed the approximate solution of bipartite matching in dense prediction methods.
+- It seems harmless to remove GN in 3DMF, which also leads to higher inference speed.
+
 ## Acknowledgement
 This repo is developed based on cvpods. Please check [cvpods](https://github.com/Megvii-BaseDetection/cvpods) for more details and features.
 
