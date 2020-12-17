@@ -92,6 +92,7 @@ pods_train --num-gpus 8 --num-machines N --machine-rank 0/1/.../N-1 --dist-url "
 | model | assignment | with NMS | lr sched. | mAP | mAR | note |
 |:------|:----------:|:--------:|:---------:|:---:|:---:|:----:|
 | [POTO](./playground/detection/coco/poto.res50.fpn.coco.800size.6x_ms) | one-to-one | No | 6x + ms | 39.8 | 62.1 | |
+| [POTO](./playground/detection/coco/poto.res50.fpn.coco.800size.9x_ms) | one-to-one | No | 9x + ms | 40.2 | 62.2 | |
 | [POTO](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms.argmax) | one-to-one | No | 3x + ms | 39.0 | 61.3 | replace Hungarian algorithm by `argmax` |
 | [POTO + 3DMF](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms.3dmf_wo_gn) | one-to-one | No | 3x + ms | 40.7 | 61.9 | remove GN in 3DMF |
 | [POTO + 3DMF + Aux](./playground/detection/coco/poto.res50.fpn.coco.800size.3x_ms.3dmf_wo_gn.aux) | mixture\* | No | 3x + ms | 41.6 | 61.5 | remove GN in 3DMF |
