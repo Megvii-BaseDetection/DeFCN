@@ -121,4 +121,4 @@ If you use this work in your research or wish to refer to the baseline results p
 ```
 
 ## Contributing to the project
-Any pull requests or issues are welcome.
+Any pull requests or issues about the implementation are welcome. If you have any issue about the library (e.g. installation, environments), please refer to [cvpods](https://github.com/Megvii-BaseDetection/cvpods).
