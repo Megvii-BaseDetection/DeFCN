@@ -1,55 +1,55 @@
 # fcos.res50.fpn.coco.800size.3x_ms  
 
-seed: 54525629
+seed: 9476764
 
 ## Evaluation results for bbox:  
 
 ```  
-Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.411
-Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.600
-Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.442
-Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.259
-Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.448
-Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.523
+Average Precision  (AP) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.414
+Average Precision  (AP) @[ IoU=0.50      | area=   all | maxDets=100 ] = 0.601
+Average Precision  (AP) @[ IoU=0.75      | area=   all | maxDets=100 ] = 0.449
+Average Precision  (AP) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.256
+Average Precision  (AP) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.449
+Average Precision  (AP) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.531
 Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=  1 ] = 0.335
 Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets= 10 ] = 0.553
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.590
-Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.413
-Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.632
-Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.736
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=   all | maxDets=100 ] = 0.591
+Average Recall     (AR) @[ IoU=0.50:0.95 | area= small | maxDets=100 ] = 0.400
+Average Recall     (AR) @[ IoU=0.50:0.95 | area=medium | maxDets=100 ] = 0.635
+Average Recall     (AR) @[ IoU=0.50:0.95 | area= large | maxDets=100 ] = 0.735
 ```  
 |   AP   |  AP50  |  AP75  |  APs   |  APm   |  APl   |  
 |:------:|:------:|:------:|:------:|:------:|:------:|  
-| 41.144 | 59.965 | 44.163 | 25.943 | 44.848 | 52.289 |
+| 41.393 | 60.086 | 44.923 | 25.561 | 44.897 | 53.084 |
 
 ### Per-category bbox AP:  
 
 | category      | AP     | category     | AP     | category       | AP     |  
 |:--------------|:-------|:-------------|:-------|:---------------|:-------|  
-| person        | 55.827 | bicycle      | 31.435 | car            | 45.076 |  
-| motorcycle    | 43.151 | airplane     | 66.558 | bus            | 66.629 |  
-| train         | 64.856 | truck        | 36.514 | boat           | 26.164 |  
-| traffic light | 28.226 | fire hydrant | 67.100 | stop sign      | 63.121 |  
-| parking meter | 45.387 | bench        | 22.123 | bird           | 36.271 |  
-| cat           | 66.592 | dog          | 61.370 | horse          | 57.585 |  
-| sheep         | 52.973 | cow          | 58.292 | elephant       | 65.086 |  
-| bear          | 70.675 | zebra        | 69.512 | giraffe        | 66.838 |  
-| backpack      | 16.581 | umbrella     | 38.987 | handbag        | 16.546 |  
-| tie           | 33.051 | suitcase     | 38.667 | frisbee        | 67.935 |  
-| skis          | 21.875 | snowboard    | 35.698 | sports ball    | 48.339 |  
-| kite          | 43.205 | baseball bat | 27.600 | baseball glove | 37.712 |  
-| skateboard    | 52.775 | surfboard    | 32.483 | tennis racket  | 48.106 |  
-| bottle        | 38.856 | wine glass   | 37.560 | cup            | 42.678 |  
-| fork          | 31.549 | knife        | 17.275 | spoon          | 16.030 |  
-| bowl          | 40.001 | banana       | 23.947 | apple          | 19.621 |  
-| sandwich      | 32.222 | orange       | 29.951 | broccoli       | 22.492 |  
-| carrot        | 22.061 | hot dog      | 29.331 | pizza          | 50.300 |  
-| donut         | 46.797 | cake         | 36.149 | chair          | 28.383 |  
-| couch         | 43.713 | potted plant | 26.597 | bed            | 38.193 |  
-| dining table  | 26.747 | toilet       | 61.831 | tv             | 55.705 |  
-| laptop        | 56.581 | mouse        | 60.873 | remote         | 29.503 |  
-| keyboard      | 47.679 | cell phone   | 35.188 | microwave      | 55.802 |  
-| oven          | 33.985 | toaster      | 37.350 | sink           | 36.474 |  
-| refrigerator  | 53.121 | book         | 13.460 | clock          | 47.878 |  
-| vase          | 37.862 | scissors     | 25.866 | teddy bear     | 45.117 |  
-| hair drier    | 9.850  | toothbrush   | 19.998 |                |        |
+| person        | 55.999 | bicycle      | 32.520 | car            | 45.318 |  
+| motorcycle    | 43.277 | airplane     | 67.218 | bus            | 66.594 |  
+| train         | 63.735 | truck        | 37.657 | boat           | 24.362 |  
+| traffic light | 27.385 | fire hydrant | 67.430 | stop sign      | 63.445 |  
+| parking meter | 43.762 | bench        | 22.987 | bird           | 36.695 |  
+| cat           | 67.516 | dog          | 62.411 | horse          | 56.741 |  
+| sheep         | 53.373 | cow          | 58.669 | elephant       | 64.608 |  
+| bear          | 71.341 | zebra        | 69.199 | giraffe        | 68.521 |  
+| backpack      | 16.543 | umbrella     | 38.757 | handbag        | 15.861 |  
+| tie           | 32.415 | suitcase     | 39.008 | frisbee        | 68.187 |  
+| skis          | 20.592 | snowboard    | 32.193 | sports ball    | 47.290 |  
+| kite          | 42.626 | baseball bat | 28.741 | baseball glove | 36.490 |  
+| skateboard    | 54.258 | surfboard    | 33.234 | tennis racket  | 49.328 |  
+| bottle        | 39.079 | wine glass   | 37.518 | cup            | 42.291 |  
+| fork          | 31.993 | knife        | 18.649 | spoon          | 15.694 |  
+| bowl          | 41.004 | banana       | 24.253 | apple          | 19.303 |  
+| sandwich      | 31.717 | orange       | 31.743 | broccoli       | 23.667 |  
+| carrot        | 21.484 | hot dog      | 31.344 | pizza          | 52.775 |  
+| donut         | 46.693 | cake         | 37.320 | chair          | 28.833 |  
+| couch         | 44.514 | potted plant | 28.510 | bed            | 38.643 |  
+| dining table  | 26.747 | toilet       | 59.289 | tv             | 55.466 |  
+| laptop        | 57.641 | mouse        | 62.759 | remote         | 31.570 |  
+| keyboard      | 47.522 | cell phone   | 35.813 | microwave      | 52.229 |  
+| oven          | 32.445 | toaster      | 41.552 | sink           | 36.470 |  
+| refrigerator  | 53.942 | book         | 13.845 | clock          | 48.035 |  
+| vase          | 36.108 | scissors     | 26.815 | teddy bear     | 47.294 |  
+| hair drier    | 13.241 | toothbrush   | 19.316 |                |        |
