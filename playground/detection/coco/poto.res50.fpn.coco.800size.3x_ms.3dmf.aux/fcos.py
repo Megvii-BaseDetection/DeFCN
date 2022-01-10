@@ -50,7 +50,7 @@ focal_loss_jit = torch.jit.script(focal_loss)  # type: torch.jit.ScriptModule
 
 class FCOS(nn.Module):
     """
-    Implement FCOS (https://arxiv.org/abs/1708.02002).
+    Implement FCOS (https://arxiv.org/abs/1904.01355).
     """
     def __init__(self, cfg):
         super().__init__()
